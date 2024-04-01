@@ -1,0 +1,114 @@
+Почему код не работает? Не отображаются сообщения об ошибках:
+```php
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Простой файлообменник</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        th {
+            padding: 5px;
+            width: 33.3%
+        }
+        table {
+            width: 100%;
+            border-spacing: 0px;
+            border-collapse: collapse;
+        }
+        table th, td {
+            border: 2px solid #000000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Простой файлообменник</h1>
+
+    <?php
+    // Функция для генерации уникального имени файла
+    function generateFileName($originalName) {
+        $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+        return uniqid() . '.' . $extension;
+    }
+
+    // Путь к директории для загрузки файлов
+    $uploadDirectory = 'uploaded-files/';
+    // Максимальный размер файла в байтах (например, 1 МБ)
+    $maxFileSize = 1000000; 
+
+    // Если файл был загружен
+    echo '<p>Размер загруженного файла: ' . $_FILES['file']['size'] . '</p>';
+    echo '<p>Максимально допустимый размер файла: ' . $maxFileSize . '</p>';
+
+    if(isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+        $fileName = $_FILES['file']['name'];
+        $fileDescription = $_POST['description'];
+        
+        // Генерируем уникальное имя файла
+        $uniqueFileName = generateFileName($fileName);
+        
+        // Перемещаем загруженный файл в директорию uploaded-files с уникальным именем
+        move_uploaded_file($_FILES['file']['tmp_name'], $uploadDirectory . $uniqueFileName);
+
+        // Записываем информацию о файле в текстовый файл
+        $fileList = fopen("filelist.txt", "a");
+        fwrite($fileList, "$fileName|$fileDescription|$uploadDirectory$uniqueFileName\n");
+        fclose($fileList);
+
+        echo '<p>Файл успешно загружен!</p>';
+    } elseif ($_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+        switch ($_FILES['file']['error']) {
+            case UPLOAD_ERR_INI_SIZE:
+                echo '<p>Ошибка: Размер файла превышает допустимый.</p>';
+                break;
+            case UPLOAD_ERR_FORM_SIZE:
+                echo '<p>Ошибка: Размер файла превышает допустимый в настройках формы.</p>';
+                break;
+            case UPLOAD_ERR_PARTIAL:
+                echo '<p>Ошибка: Файл загружен не полностью.</p>';
+                break;
+            case UPLOAD_ERR_NO_FILE:
+                echo '<p>Ошибка: Файл не был выбран.</p>';
+                break;
+            case UPLOAD_ERR_NO_TMP_DIR:
+                echo '<p>Ошибка: Отсутствует временная папка для загрузки файлов.</p>';
+                break;
+            case UPLOAD_ERR_CANT_WRITE:
+                echo '<p>Ошибка: Невозможно записать файл на диск.</p>';
+                break;
+            case UPLOAD_ERR_EXTENSION:
+                echo '<p>Ошибка: Загрузка файлов данного типа запрещена.</p>';
+                break;
+        }
+    } else {
+        #echo '<p>Ошибка при загрузке файла.</p>';
+    }
+    echo '<p>'.$_FILES['file']['error'].'</p>';
+    // Отображаем список загруженных файлов
+    echo '<h2>Загруженные файлы</h2>';
+    echo '<table>';
+    echo '<tr><th>Имя файла</th><th>Описание</th><th>Ссылка на скачивание</th></tr>';
+    
+    $fileList = file("filelist.txt", FILE_IGNORE_NEW_LINES);
+    foreach ($fileList as $fileInfo) {
+        list($fileName, $description, $fileUrl) = explode('|', $fileInfo);
+        echo "<tr><td>$fileName</td><td>$description</td><td><a href='$fileUrl' download>Скачать</a></td></tr>";
+    }
+    echo '</table>';
+    ?>
+
+    <h2>Загрузить файл</h2>
+    <form action="" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="MAX_FILE_SIZE" value="20971520">
+        <label for="file">Выберите файл:</label>
+        <input type="file" name="file" id="file" required><br>
+        <label for="description">Описание:</label>
+        <input type="text" name="description" id="description"><br>
+        <input type="submit" value="Загрузить файл">
+    </form>
+</body>
+</html>
+```
